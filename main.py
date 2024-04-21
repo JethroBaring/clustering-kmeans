@@ -3,8 +3,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-import pickle  #used to create pickle files
-import joblib  #used to save models
 
 data = pd.read_csv("wine-clustering.csv")
 
