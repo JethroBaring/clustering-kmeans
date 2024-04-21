@@ -18,6 +18,3 @@ results = pd.DataFrame(reduced_data,columns=['pca1','pca2'])
 sns.scatterplot(x="pca1", y="pca2", hue=data['clusters'], data=results)
 plt.title('K-means Clustering with 2 dimensions')
 plt.show()
-
-pickle.dump(kmeans, open('wine_clustering.pkl', 'wb'))
-pickle.dump(kmeans, open('vectorizer.pkl', 'wb'))       
