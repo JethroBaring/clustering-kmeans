@@ -2,13 +2,12 @@ import streamlit as st
 import pickle
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from sklearn.decomposition import PCA
-import mplcursors  # Import mplcursors library for hover tooltips
+st.set_page_config(page_title="Wine Clustering")  # Wide layout
 
 # Load the KMeans model
 kmeans = pickle.load(open('wine_clustering.pkl', 'rb'))
-
 # Streamlit app title
 st.title("Wine Clustering App")
 
@@ -23,61 +22,88 @@ def predict_cluster(input_text, kmeans_model):
 
     return cluster[0]
 
-# Input field for comma-separated values
-input_text = st.text_input("Enter comma-separated values")
+labels = [
+    "Alcohol", "Malic Acid", "Ash", "Ash Alcanity", "Magnesium",
+    "Total Phenols", "Flavanoids", "Nonflavanoid Phenols",
+    "Proanthocyanins", "Color Intensity", "Hue", "OD280", "Proline"
+]
 
-# Initialize the plot
-fig, ax = plt.subplots(figsize=(10, 6))
-scatter = ax.scatter([], [], cmap='viridis')
+# Concatenate the labels into a single string with commas
+placeholder_text = ",".join(labels)
+
+# Input field for comma-separated values with clear instructions
+input_text = st.text_input(f"Enter comma-separated floating point values, each corresponding to:\n\n{placeholder_text}")
+
+
 
 # Perform PCA on existing data
 data = pd.read_csv("wine-clustering.csv")
 pca = PCA(n_components=2)
 reduced_data = pca.fit_transform(data)
 
-# Plot existing data points with cluster colors
-existing_scatter = []
+# Create trace for existing data points with cluster colors
+traces = []
+colors = ['rgb(31, 119, 180)', 'rgb(255, 127, 14)', 'rgb(44, 160, 44)']  # Define distinct colors for clusters
 for i in range(kmeans.n_clusters):
-    cluster_color = plt.cm.viridis(i / kmeans.n_clusters)  # Get cluster color from colormap
-    scatter = ax.scatter(reduced_data[kmeans.labels_ == i, 0], reduced_data[kmeans.labels_ == i, 1], label=f'Cluster {i}', color=cluster_color)
-    existing_scatter.append(scatter)
+    trace = go.Scatter(
+        x=reduced_data[kmeans.labels_ == i, 0],
+        y=reduced_data[kmeans.labels_ == i, 1],
+        mode='markers',
+        marker=dict(color=colors[i], size=8),
+        name=f'Cluster {i}',
+        showlegend=True
+    )
+    traces.append(trace)
 
-# Plot the "New Data" label
-new_data_label = ax.scatter([], [], c='red', marker='*', s=200, label='')
+# Initialize the plot with existing data
+fig = go.Figure(data=traces)
 
-ax.set_xlabel('Principal Component 1')
-ax.set_ylabel('Principal Component 2')
-ax.set_title('Wine Clustering (PCA)')
+# Update layout
+fig.update_layout(
+    title='Wine Clustering Plot',
+    xaxis_title='Principal Component 1',
+    yaxis_title='Principal Component 2',
+    hovermode='closest',
+    plot_bgcolor='rgba(255,255,255,1)'  # Set background color
+)
+
 cluster = None
-empty = False
-# Button to trigger prediction
-if st.button("Predict Cluster"):
+hasInput = True
+# Function to update the plot with new data
+def update_plot(input_text, kmeans_model, pca_model, fig):
+    global cluster, hasInput
     if input_text:
         # Predict cluster for new data
-        cluster = predict_cluster(input_text, kmeans)
+        cluster = predict_cluster(input_text, kmeans_model)
+        hasInput = True
         # Perform PCA on new data point
         new_data = np.array(input_text.split(','), dtype=np.float64).reshape(1, -1)
-        reduced_new_data = pca.transform(new_data)
+        reduced_new_data = pca_model.transform(new_data)
 
-        # Highlight newly predicted data point
-        ax.scatter(reduced_new_data[:, 0], reduced_new_data[:, 1], c='red', marker='*', s=200, label='New Data')
-
-        ax.set_xlabel('Principal Component 1')
-        ax.set_ylabel('Principal Component 2')
-        ax.set_title('Wine Clustering (PCA)')
+        # Add trace for new data point
+        fig.add_trace(
+            go.Scatter(
+                x=reduced_new_data[:, 0],
+                y=reduced_new_data[:, 1],
+                mode='markers',
+                marker=dict(color='red', size=12, symbol='star'),
+                name='New Data',
+                showlegend=True
+            )
+        )
     else:
-        empty = True
+        hasInput = False;
+        
+
+# Button to trigger prediction and plot update
+if st.button("Predict Cluster"):
+    update_plot(input_text, kmeans, pca, fig)
 
 
-# Update the legend to include both existing scatter and "New Data" label
-handles, labels = ax.get_legend_handles_labels()
-handles = existing_scatter + [new_data_label]
-labels = [f'Cluster {i}' for i in range(kmeans.n_clusters)] + ['New Data']
-ax.legend(handles, labels)
+st.plotly_chart(fig)
 
-# Display the plot
-st.pyplot(fig)
-if cluster != None:
-    st.write(f"Predicted Cluster: {cluster}")
-if empty:
-    st.write(f"Please input 13 features separated by comma")
+if cluster is not None:
+    st.write("Predicted Cluster: ", cluster)
+
+if hasInput == False:
+    st.write("Please enter values separated by commas.")
