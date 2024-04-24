@@ -52,6 +52,8 @@ data = pd.read_csv("wine-clustering.csv")
 pca = PCA(n_components=2)
 reduced_data = pca.fit_transform(data)
 
+clusters = ["Rich Flavors","Classic Balance","Bold Structure"]
+
 # Create trace for existing data points with cluster colors
 traces = []
 colors = ['rgb(31, 119, 180)', 'rgb(255, 127, 14)', 'rgb(44, 160, 44)']  # Define distinct colors for clusters
@@ -61,7 +63,7 @@ for i in range(kmeans.n_clusters):
         y=reduced_data[kmeans.labels_ == i, 1],
         mode='markers',
         marker=dict(color=colors[i], size=8),
-        name=f'Cluster {i}',
+        name=clusters[i],
         showlegend=True
     )
     traces.append(trace)
